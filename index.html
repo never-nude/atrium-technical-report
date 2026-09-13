@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="The full AI-written Atrium engineering report: architecture, 3D models, AR/VR, physical size, lighting and testing evidence.">
+<meta name="theme-color" content="#132438">
+<meta name="author" content="OpenAI Codex (AI)">
+<title>Atrium technical report — Pipelines, physical size and immersive viewing</title>
+<link rel="canonical" href="https://never-nude.github.io/atrium-technical-report/">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body id="top">
+<a class="skip-link" href="#report">Skip to report</a>
+<header class="site-header"><a class="brand" href="https://never-nude.github.io/atrium-technical-report/">Atrium <span>Technical report</span></a>
+<nav class="header-links" aria-label="Related links"><a href="https://atrium.earth/">Visit Atrium ↗</a><a href="https://github.com/never-nude/atrium-technical-report">GitHub ↗</a></nav></header>
+<div class="report-layout">
+<aside class="toc"><nav aria-label="Contents"><p class="toc-label">In this report</p><ol><li><a href="#what-changed-after-424-works">What changed after 424 works</a></li><li><a href="#architecture-and-dependency-boundary">Architecture and dependency boundary</a></li><li><a href="#acquisition-conversion-and-delivery">Acquisition, conversion and delivery</a></li><li><a href="#three-js-scene-and-resource-lifecycle">Three.js scene and resource lifecycle</a></li><li><a href="#physical-reference-contract">Physical-reference contract</a></li><li><a href="#access-size-badges-and-asset-identity">Access, size badges and asset identity</a></li><li><a href="#webxr-session-implementation">WebXR session implementation</a></li><li><a href="#client-side-usdz-preparation">Client-side USDZ preparation</a></li><li><a href="#lighting-exposure-is-not-reflectance">Lighting: exposure is not reflectance</a></li><li><a href="#laocoon-one-number-is-not-the-object">Laocoön: one number is not the object</a></li><li><a href="#verification-and-visitor-facing-changes">Verification and visitor-facing changes</a></li><li><a href="#reproduction-and-remaining-work">Reproduction and remaining work</a></li><li><a href="#source-map-and-evidence">Source map and evidence</a></li></ol>
+<a class="pdf-link" href="atrium-technical-report.pdf" download>Download 14-page PDF ↓</a></nav></aside>
+<main id="report">
+<header class="report-cover">
+<p class="eyebrow">Engineering report · AI-written</p>
+<h1>Pipelines, physical size and immersive viewing</h1>
+<p class="lede">A source-based technical account of Atrium.Earth: what changed after the 424-work collection, how the implementation works, and where its evidence stops.</p>
+<p class="cover-meta"><time datetime="2026-09-13">13 September 2026</time> · Full HTML edition of the 14-page report</p>
+<div class="cover-actions"><a class="button button-primary" href="#what-changed-after-424-works">Read the report ↓</a><a class="button button-secondary" href="atrium-technical-report.pdf" download>Download PDF</a></div>
+<div class="metrics"><div><strong>1,046</strong><span>Public works</span><small>424 at the comparison baseline</small></div><div><strong>622</strong><span>Net new works</span><small>627 added; 5 withheld later</small></div><div><strong>248</strong><span>Strict size references</span><small>798 unverified default displays</small></div></div>
+<p class="disclosure"><strong>Authorship &amp; method.</strong> Written by OpenAI Codex, an AI assistant, at the project creator’s request. This is AI-authored technical documentation, not the creator’s personal account or an independent external audit. It is based on repository inspection, source records, deployment history and recorded automated checks.</p>
+<p class="disclosure">The project creator has <strong>not personally tested the VR experience in a headset</strong>. Browser tests and simulated WebXR sessions do not establish headset compatibility, tracking quality or physical placement accuracy.</p>
+<p class="cover-meta">Release snapshot: <a href="https://github.com/never-nude/atrium.earth/tree/541669e476adc7e2747b729cc73fd1efe0194b58">541669e</a>, published and checked on atrium.earth. All 1,046 works offer AR/VR: 248 reviewed size references and 798 explicitly unverified default display sizes. Native lighting follows the correction in c66d124.</p>
+<p class="cover-meta">Page references in the text refer to the PDF. <a href="atrium-report-evidence.json" download>Download its evidence index (JSON)</a>.</p>
+<details class="mobile-contents"><summary>Contents · 13 chapters</summary><nav aria-label="Contents on small screens"><ol><li><a href="#what-changed-after-424-works">What changed after 424 works</a></li><li><a href="#architecture-and-dependency-boundary">Architecture and dependency boundary</a></li><li><a href="#acquisition-conversion-and-delivery">Acquisition, conversion and delivery</a></li><li><a href="#three-js-scene-and-resource-lifecycle">Three.js scene and resource lifecycle</a></li><li><a href="#physical-reference-contract">Physical-reference contract</a></li><li><a href="#access-size-badges-and-asset-identity">Access, size badges and asset identity</a></li><li><a href="#webxr-session-implementation">WebXR session implementation</a></li><li><a href="#client-side-usdz-preparation">Client-side USDZ preparation</a></li><li><a href="#lighting-exposure-is-not-reflectance">Lighting: exposure is not reflectance</a></li><li><a href="#laocoon-one-number-is-not-the-object">Laocoön: one number is not the object</a></li><li><a href="#verification-and-visitor-facing-changes">Verification and visitor-facing changes</a></li><li><a href="#reproduction-and-remaining-work">Reproduction and remaining work</a></li><li><a href="#source-map-and-evidence">Source map and evidence</a></li></ol></nav></details>
+</header>
+<article aria-label="Full technical report"><section class="report-section" id="what-changed-after-424-works" aria-labelledby="what-changed-after-424-works-title">
+<header class="section-heading"><p class="section-number">01 / PDF page 2</p>
+<h2 id="what-changed-after-424-works-title">What changed after 424 works</h2></header>
+<p>The earlier Reddit post described a 424-work digital collection and an existing Astro/Three.js/Node/Python workflow. A reader suggested AR/VR. The comparison here uses commit <code>6652430</code>, the last first-parent repository state with 424 public works, rather than inventing an exact publication timestamp for the post. That revision has 431 raw catalogue records and seven hidden records. [<a class="reference" href="#ref-1">R1</a>, <a class="reference" href="#ref-2">R2</a>]</p>
+<p>The released catalogue now contains 1,058 records, of which 1,046 are public. Comparing slug sets and every first-parent transition gives 627 additions and five later withdrawals from public display: <strong>622 additional public works</strong>, a 146.7% increase. All original 424 public works remain. Hidden records are retained, not deleted. [<a class="reference" href="#ref-3">R3</a>]</p>
+<div class="table-wrap" role="region" aria-label="Table 1: Change" tabindex="0"><table>
+<thead><tr><th scope="col">Change</th><th scope="col">State in the 13 September release</th></tr></thead><tbody>
+<tr><td>Collection growth</td><td>424 -&gt; 1,046 public works; broader holdings, including 50 Islamic-world works.</td></tr>
+<tr><td>Browsing and curation</td><td>Six permanent wings; exhibition stops now support interactive 3D; nine additions to existing exhibitions and six corrected wing assignments.</td></tr>
+<tr><td>Delivery and viewer</td><td>R2 GLB delivery; resource management for multiple viewers; reviewed orientation, bounds and selected scan repairs.</td></tr>
+<tr><td>Immersive viewing</td><td>WebXR AR/VR and client-side Apple USDZ preparation, device guidance, independent display supports, native lighting correction.</td></tr>
+<tr><td>Current AR/VR discovery</td><td>Home-page feature, navigation and dedicated index; all 1,046 works offer AR/VR, with 248 strict size references and 798 chosen default displays labelled Size unverified.</td></tr>
+</tbody></table></div>
+<h3>Some additions that can be identified precisely</h3>
+<p>New post-baseline works include Hepworth&#x27;s <strong>Ancestor I</strong>, Dubuffet&#x27;s <strong>La Chiffonnière</strong>, Saint Phalle&#x27;s <strong>The Firebird</strong> and <strong>Nikigator</strong>, a Gandharan <strong>Buddha</strong> from Minneapolis, Suzuki Masanao&#x27;s <strong>Curled rat</strong>, the Rapa Nui <strong>Long Rongorongo Tablet</strong>, the <strong>Nasrid Casket</strong>, and an <strong>Abbasid Tombstone</strong> dated 830 CE. These are examples, not a claim that every new object is a marble sculpture or a photogrammetric scan. Source collections include institutional repositories, independent scans and archive mirrors; their inclusion does not imply institutional partnerships. [<a class="reference" href="#ref-3">R3</a>]</p>
+<h3>What is not new</h3>
+<p>Astro, the custom Three.js viewer, Node/Python ingestion, source and rights records, collection filtering, thematic exhibitions and featured rotation already existed. The direct JavaScript dependency versions also stayed unchanged. The work extended that system; it did not replace it with a newly written rendering engine. [<a class="reference" href="#ref-2">R2</a>-<a class="reference" href="#ref-5">R5</a>]</p>
+</section><section class="report-section" id="architecture-and-dependency-boundary" aria-labelledby="architecture-and-dependency-boundary-title">
+<header class="section-heading"><p class="section-number">02 / PDF page 3</p>
+<h2 id="architecture-and-dependency-boundary-title">Architecture and dependency boundary</h2></header>
+<p>Atrium is a statically generated catalogue with interactive client rendering. <code>catalog.ts</code> combines a master JSON catalogue with explicit overlays for preview URLs, orientation, material appearance, identity, physical dimensions and display recommendations. Hidden entries are excluded before public route generation. Work pages are generated from the normalized public list. <code>Work.spatialAccess</code> now controls AR/VR availability and chosen display size; the separate <code>spatialEligibility</code> result controls the strict size-review badge and guarantees. This separates acquisition records from presentation decisions while preserving stable object routes. [<a class="reference" href="#ref-3">R3</a>, <a class="reference" href="#ref-4">R4</a>]</p>
+<figure class="pipeline" aria-labelledby="pipeline-caption">
+<ol class="pipeline-main">
+<li><h4>Offline ingest</h4><p>Source records + scans<br>Node / Python / glTF tools</p></li>
+<li><h4>Static build</h4><p>Catalogue + reviewed overrides<br>Astro → GitHub Pages</p></li>
+<li><h4>Browser</h4><p>Three.js + R2 GLBs<br>Load on demand</p></li>
+</ol>
+<div class="pipeline-branches">
+<div><h4>WebXR</h4><p>Same Three renderer<br>AR hit tests / VR room</p></div>
+<div><h4>Apple Quick Look</h4><p>Temporary USDZ export<br>Separate native renderer</p></div>
+</div>
+<figcaption id="pipeline-caption">Source assets become a static website and browser views; immersive viewing branches into WebXR or Apple Quick Look.</figcaption>
+</figure>
+<p>The web application deploys to <strong>GitHub Pages</strong>. GLBs are delivered separately through <code>models.atrium.earth</code>, backed by Cloudflare R2. There is no application Worker, server-side USDZ conversion service or multiplayer backend in the inspected path. The build removes local mirrors only when a recognized remote URL is configured; asset publication and CORS policy are separate operational steps. [<a class="reference" href="#ref-4">R4</a>, <a class="reference" href="#ref-13">R13</a>]</p>
+<div class="table-wrap" role="region" aria-label="Table 1: Locked dependency" tabindex="0"><table>
+<thead><tr><th scope="col">Locked dependency</th><th scope="col">Version</th><th scope="col">Role</th></tr></thead><tbody>
+<tr><td>Astro</td><td>6.1.10</td><td>Static HTML, routing, component compilation.</td></tr>
+<tr><td>Three.js</td><td>0.182.0</td><td>Active renderer, scene graph, loaders, WebXR integration and USDZ exporter.</td></tr>
+<tr><td>glTF Transform CLI</td><td>4.4.2</td><td>Optional mesh/texture optimization in acquisition workflows.</td></tr>
+<tr><td>Playwright</td><td>1.61.1</td><td>Browser automation and recorded UI/export checks.</td></tr>
+<tr><td>model-viewer</td><td>4.2.0</td><td>Installed dependency; no active component/import found in the Astro viewer path.</td></tr>
+</tbody></table></div>
+<p>The table reports lockfile resolutions, not current upstream releases; these versions also appear at the 424-work baseline. Lucide 1.14.0 and the Astro sitemap integration 3.7.2 are likewise unchanged. Python requirements pin Trimesh 4.12.1 and fast-simplification 0.1.12; scipy and networkx use lower bounds rather than fully locked versions. [<a class="reference" href="#ref-4">R4</a>]</p>
+<h3>Runtime boundaries</h3>
+<p>Normal 3D and WebXR share the existing Three renderer. Apple Quick Look consumes an exported USDZ and renders it independently. A browser viewport, an immersive reference space and a native AR scene therefore cannot be assumed to share camera exposure, tracking, material evaluation or coordinate interpretation. The implementation explicitly bridges geometry and selected material properties; it cannot make the renderers physically identical. [<a class="reference" href="#ref-5">R5</a>-<a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-14">R14</a>-<a class="reference" href="#ref-17">R17</a>]</p>
+</section><section class="report-section" id="acquisition-conversion-and-delivery" aria-labelledby="acquisition-conversion-and-delivery-title">
+<header class="section-heading"><p class="section-number">03 / PDF page 4</p>
+<h2 id="acquisition-conversion-and-delivery-title">Acquisition, conversion and delivery</h2></header>
+<p>The existing ingestion system has manifest-driven and discovery/fetch/assembly paths. A candidate needs an identifiable object, a source model or archive, provenance and recorded rights. The workflow retains original and preview artifacts separately, with explicit metadata/appearance/orientation overrides. Expansion increased the number and diversity of acquisitions; it did not introduce the idea of automated ingestion from scratch. [<a class="reference" href="#ref-2">R2</a>-<a class="reference" href="#ref-4">R4</a>]</p>
+<h3>Processing sequence</h3>
+<ul>
+<li>Discover a candidate, resolve identity/version and collect source metadata. An institution&#x27;s location in a record does not mean the institution supplied the scan.</li>
+<li>Fetch and retain source geometry; convert supported source formats into glTF/GLB previews. Node and Python scripts coordinate mesh work and catalogue assembly.</li>
+<li>Where invoked, simplify/compress and resize textures using the configured tooling. Draco decoding is supported by the viewer, but optimization is optional: not every source file necessarily uses Draco.</li>
+<li>Review pose, up-axis, support boundary and appearance. An orientation-solve timeout can preserve a low-confidence review outcome instead of hanging or treating a guessed result as verified.</li>
+<li>Produce still assets through a browser render harness. The thumbnail pipeline captures a 1,000 x 1,250 canvas and converts output to WebP at configured quality 90.</li>
+<li>Publish preview assets, update their mappings, validate the catalogue/build and inspect selected rendered works. This includes human-directed curation and visual review.</li>
+</ul>
+<h3>R2 migration and measurable scope</h3>
+<p>The September migration recorded a reduction of the then-current model set from about <strong>2.47 GB to 1.18 GB</strong>, and a static build of about <strong>82 MB</strong> after model separation. These are migration-time figures, not today&#x27;s total collection size or a phone download budget. The current 1,046 public preview entries all point to the model domain. Later batches use content-hashed URLs and retain hashes for originals/previews. Some historical URLs are mutable, which motivates the runtime byte check described on page 7. [<a class="reference" href="#ref-13">R13</a>]</p>
+<p>A concrete acquisition example is the 30-work diverse batch: its archived originals totalled about 1,018.29 MB and its previews 42.56 MB. That batch is evidence of a reduction for those assets, not a universal compression ratio. The static asset verifier accepts configured remote URLs but does not itself prove remote availability; separate network checks are necessary. [<a class="reference" href="#ref-3">R3</a>, <a class="reference" href="#ref-13">R13</a>]</p>
+<h3>Geometry and rights are independent reviews</h3>
+<p>The September scan review corrected 73 placements among 450 recent works, regenerated the then-public thumbnails, and removed 304 isolated triangles from The Kiss while checking retained geometry and texture. Severe scans were withheld rather than presented as repaired. These operations do not establish uniform capture quality across the collection. [<a class="reference" href="#ref-3">R3</a>]</p>
+<p>The website&#x27;s original source code uses MIT licensing. Third-party scans, images, derived thumbnails and collection metadata retain their applicable source terms. Metadata filters and recorded licenses are useful controls, not a blanket grant or a comprehensive legal determination. [<a class="reference" href="#ref-4">R4</a>]</p>
+</section><section class="report-section" id="three-js-scene-and-resource-lifecycle" aria-labelledby="three-js-scene-and-resource-lifecycle-title">
+<header class="section-heading"><p class="section-number">04 / PDF page 5</p>
+<h2 id="three-js-scene-and-resource-lifecycle-title">Three.js scene and resource lifecycle</h2></header>
+<p>The active <code>Viewer.astro</code> dynamically imports Three.js, GLTFLoader, DRACOLoader, MeshoptDecoder, OrbitControls and environment support. Decoder files are served locally under <code>/vendor/draco/</code>. WebGLRenderer uses antialiasing, a device-pixel ratio capped at two, ACES filmic tone mapping, sRGB output and soft shadow mapping. A PMREM-filtered RoomEnvironment, hemisphere light and directional lights provide the web presentation. Per-work settings control appearance and camera/view parameters. [<a class="reference" href="#ref-5">R5</a>]</p>
+<h3>Normalization is a presentation transform</h3>
+<p>Source up-axis and reviewed rotation/yaw are applied before precise geometry bounds are evaluated. <code>Box3.setFromObject(model, true)</code> uses transformed geometry rather than relying solely on cached local boxes. The longest displayed dimension is normalized to one scene unit and the model is centered. Uniform multiplication preserves relative authored scale; independently forcing x/y/z extents would distort the object. Camera fitting uses projected corners. [<a class="reference" href="#ref-5">R5</a>, <a class="reference" href="#ref-9">R9</a>]</p>
+<pre tabindex="0" aria-label="Code or formula"><code>B_i = maximum displayed coordinate_i - minimum coordinate_i
+k   = 1 / max(B_x, B_y, B_z)
+normalized geometry = translate_to_center(k * oriented geometry)
+spatial placement   = reviewed or default uniform scale</code></pre>
+<p>One normalized scene unit is a convenient framing convention. It is not evidence that the real object is one metre high or wide. A verified physical scale must reference the same reviewed pose and asset. An unverified display instead uses an explicitly chosen longest extent and makes no measurement claim. Errors in surviving fragments, protruding restoration parts or retained museum bases cannot be solved by camera framing.</p>
+<h3>Loading, suspension and disposal</h3>
+<p>Standalone views can auto-start after first paint/idle; exhibition views can activate within a 200-pixel intersection margin. Loading is deferred, not universally click-only. A resident-viewer map targets four nearby/recent lazy viewers, including pending loads. This is a <strong>soft target</strong>: visible, focused and fullscreen views are exempt. Camera state is retained when a resident is released. [<a class="reference" href="#ref-5">R5</a>]</p>
+<p>Offscreen, hidden or spatially suspended views stop their screen loop. Release disposes owned geometry, materials, textures, controls, environment and rendering resources, disconnects observers, and forces WebGL context loss. Cancellation and generation tracking prevent a late async load from attaching to a released view. Reusing the renderer for WebXR also requires suspending and subsequently restoring screen controls and animation.</p>
+<h3>Appearance semantics and known limits</h3>
+<p>Standard source materials are reused; other material types may be converted to MeshStandardMaterial. Textured source materials bypass generic untextured tint/roughness/metalness overrides. Untextured models can receive curated profiles and synthetic vertex variation. Wireframe is a separate display path, while the Texture/finish control affects roughness. These are display choices, not measured reconstruction of the original object&#x27;s reflectance. Source-colour loss and unlit-to-lit conversion remain specific follow-up issues; page 10 records the audit scope. [<a class="reference" href="#ref-5">R5</a>, <a class="reference" href="#ref-11">R11</a>]</p>
+</section><section class="report-section" id="physical-reference-contract" aria-labelledby="physical-reference-contract-title">
+<header class="section-heading"><p class="section-number">05 / PDF page 6</p>
+<h2 id="physical-reference-contract-title">Physical-reference contract</h2></header>
+<p>A catalogue dimension string is not parsed into an immersive scale. For the strict size badge, the combined reference and eligibility contract requires source evidence, acceptable status/basis, a reviewed axis, positive metres, a valid optional component fraction, and matching model URL and orientation. <code>physicalDimensionsFor</code> checks placement configuration; <code>spatialEligibilityFor</code> adds source, measurement-conversion and review checks. AR/VR access is now independent of passing this verification. [<a class="reference" href="#ref-8">R8</a>-<a class="reference" href="#ref-10">R10</a>]</p>
+<div class="table-wrap" role="region" aria-label="Table 1: Configured physical reference" tabindex="0"><table>
+<thead><tr><th scope="col">Configured physical reference</th><th scope="col">Works</th><th scope="col">Interpretation</th></tr></thead><tbody>
+<tr><td>Documented reference</td><td>644</td><td>One selected extent is configured; other extents are not certified.</td></tr>
+<tr><td>Approximate reference</td><td>22</td><td>Source value or model/component boundary is explicitly approximate.</td></tr>
+<tr><td>No supported reference</td><td>380</td><td>No accepted calibrated placement, even if dimensions are published.</td></tr>
+</tbody></table></div>
+<p>These categories total 1,046 and are unchanged by the access release. Source-record status is a different count: 806 documented, 41 approximate, 198 unresolved and one variable. A museum height can be exact as a transcription while its boundary in a scan is estimated. Only 248 references currently pass the stricter badge policy. The other 798 use chosen viewing presets, not their uncertain measurements. [<a class="reference" href="#ref-8">R8</a>, <a class="reference" href="#ref-10">R10</a>]</p>
+<h3>Uniform scale and component scope</h3>
+<p>Let <code>a</code> be the reviewed axis, <code>B_a</code> its normalized extent, <code>f</code> the reviewed component fraction (default one), and <code>D</code> the source measurement in metres:</p>
+<pre tabindex="0" aria-label="Code or formula"><code>s = D / (B_a * f)        with D &gt; 0, B_a &gt; 0, 0 &lt; f &lt;= 1
+artwork.scale = (s, s, s)
+artwork.position.y = supportHeight - box.min.y * s</code></pre>
+<p>This preserves proportions rather than fitting each axis to a dimension triplet. Units are explicit: mm x 0.001, cm x 0.01, or metres. Source labels such as Length or Depth remain visible even when their mapped model axis is Y. Invalid references cannot authorize a verified-size badge. [<a class="reference" href="#ref-9">R9</a>, <a class="reference" href="#ref-10">R10</a>]</p>
+<p>There are 27 configured component/region references, six in the strict subset. Ugolino&#x27;s 197.5 cm reference concerns the sculpture rather than its retained pedestal; the reviewed fraction is approximately 0.619004. This does not verify every secondary dimension or automatically identify components in future scans. [<a class="reference" href="#ref-8">R8</a>]</p>
+<h3>Furniture and default display size</h3>
+<p>Virtual furniture lives in room metres, independently of artwork scaling. Raising a plinth does not enlarge the work. Captured bases stay within the mesh. For an unverified display, <code>displayReferenceFor</code> chooses the longest oriented X/Y/Z extent and scales it uniformly to a recorded preset; surrounding scan geometry remains included. This is a viewing choice, not a sourced measurement. Strict references stay fixed; defaults can be resized. Apple assemblies containing a virtual stand stay fixed to preserve the furniture&#x27;s dimensions. [<a class="reference" href="#ref-6">R6</a>, <a class="reference" href="#ref-10">R10</a>]</p>
+</section><section class="report-section" id="access-size-badges-and-asset-identity" aria-labelledby="access-size-badges-and-asset-identity-title">
+<header class="section-heading"><p class="section-number">06 / PDF page 7</p>
+<h2 id="access-size-badges-and-asset-identity-title">Access, size badges and asset identity</h2></header>
+<p>All <strong>1,046 public works</strong> now offer AR/VR on compatible devices. <code>Work.spatialAccess</code> separates access from strict size verification: <strong>248</strong> retain reviewed badges, while <strong>798</strong> have chosen starting sizes and red <strong>Size unverified</strong> text. The strict group comprises 26 original-size references, 201 museum-object references and 21 measured casts. A cast badge does not certify the original&#x27;s size or every dimension. [<a class="reference" href="#ref-10">R10</a>]</p>
+<p>The 798 defaults include 380 unsupported, 22 approximate and 396 documented references needing further review. Their source records remain intact; unresolved axis, component, version or secondary-extent questions prevent verification rather than access. An uncertain museum dimension is never used to derive a default.</p>
+<h3>Explicit viewing presets</h3>
+<p><code>spatial-display-defaults.json</code> records a choice for each unverified work. Its <code>maxExtentMeters</code> targets the longest displayed side, not necessarily height:</p>
+<div class="table-wrap" role="region" aria-label="Table 1: Preset" tabindex="0"><table>
+<thead><tr><th scope="col">Preset</th><th scope="col">Longest extent</th><th scope="col">Works</th></tr></thead><tbody>
+<tr><td>Detail</td><td>0.2 m</td><td>41</td></tr>
+<tr><td>Handheld</td><td>0.4 m</td><td>154</td></tr>
+<tr><td>Portrait</td><td>0.6 m</td><td>91</td></tr>
+<tr><td>General</td><td>1 m</td><td>203</td></tr>
+<tr><td>Large form</td><td>1.5 m</td><td>309</td></tr>
+</tbody></table></div>
+<p>Codex selected these viewing presets from object-type, title and slug cues: 40 individual choices, 583 ordered-rule choices and 175 neutral fallbacks. They are neither physical measurements nor estimates of original size. Each record retains its selection reason. Wide reliefs scale by width; upright figures may scale by height. [<a class="reference" href="#ref-10">R10</a>]</p>
+<pre tabindex="0" aria-label="Code or formula"><code>defaultScale = chosenMaxExtent / max(B_x, B_y, B_z)
+access = compatibleGLB
+strictBadge = explicitDecision &amp;&amp; validEvidence &amp;&amp; matchingBinding</code></pre>
+<h3>Strict evidence and downloaded bytes</h3>
+<p><code>spatial-eligibility.mjs</code> retains the measurement/unit, source URL, geometry-review, asset SHA-256, orientation and component checks. It fingerprints the whole dimension record with recursively sorted object keys and preserved array order. The binding includes slug, kind and policy version. A changed secondary measurement invalidates its review. Fingerprints are integrity checks, not digital signatures or proof of source truth; algorithm changes still require review. [<a class="reference" href="#ref-10">R10</a>]</p>
+<p>For a work claiming verified size, the viewer fetches the GLB, hashes it with Web Crypto and decodes the same ArrayBuffer. A mismatched or failed digest prevents WebXR and native export while preserving ordinary 3D. Launch functions repeat this guard. The default path makes no verified-size claim and does not require that reviewed hash. Historical changed-byte browser tests cover the strict guard; they are not a claim of hash-gated defaults. Both paths preserve proportions and avoid compensating axis stretch. [<a class="reference" href="#ref-5">R5</a>, <a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-12">R12</a>]</p>
+</section><section class="report-section" id="webxr-session-implementation" aria-labelledby="webxr-session-implementation-title">
+<header class="section-heading"><p class="section-number">07 / PDF page 8</p>
+<h2 id="webxr-session-implementation-title">WebXR session implementation</h2></header>
+<p>The browser layer probes immersive AR and VR independently, with 2.5-second deadlines and handling for missing, throwing, rejected or slow APIs. Secure-context requirements and device-specific guidance are part of the UI. Apple Quick Look recognition combines <code>rel=ar</code> support with narrowly identified iOS browser fallbacks and an embedded-browser exclusion. Capability detection is a routing decision, not proof that tracking or display will work on a particular device. [<a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-16">R16</a>, <a class="reference" href="#ref-17">R17</a>]</p>
+<h3>User activation and state transitions</h3>
+<p>Session requests are issued synchronously from the launch click before asynchronous scene work. A deep link to <code>#ar-vr</code> opens the options dialog only; it does not request a session or export without another action. Busy, pending, ready and failed states govern buttons, export invalidation and cancellation. [<a class="reference" href="#ref-7">R7</a>]</p>
+<pre tabindex="0" aria-label="Code or formula"><code>3D view -&gt; options dialog -&gt; capability + model checks
+        -&gt; explicit launch click -&gt; pending session
+        -&gt; suspended screen controls -&gt; immersive loop
+        -&gt; end / denial / interruption -&gt; restored 3D view</code></pre>
+<div class="table-wrap" role="region" aria-label="Table 1: Mode" tabindex="0"><table>
+<thead><tr><th scope="col">Mode</th><th scope="col">Required behaviour in the implementation</th></tr></thead><tbody>
+<tr><td>AR</td><td>Request immersive-ar with hit-test; use local reference space, viewer hit-test source, transparent scene background and a placement reticle.</td></tr>
+<tr><td>VR</td><td>Request immersive-vr with local-floor; place the object two metres ahead of the initial reference origin; use an opaque room background.</td></tr>
+<tr><td>Optional capabilities</td><td>DOM overlay; VR also requests optional hand tracking, without a bespoke hand-gesture interaction system.</td></tr>
+</tbody></table></div>
+<p>AR placement accepts poses whose transform has <code>matrix[5] &gt;= 0.85</code>, rejecting strongly tilted/wall surfaces. On select, the anchor receives the hit position and becomes visible. Placement keeps the object upright; it is not a general surface-conforming or wall-mounting system. Repositioning hides the artwork until another suitable hit is selected. [<a class="reference" href="#ref-6">R6</a>]</p>
+<p>VR controller select rotates the anchor by 30 degrees. The strictly reviewed path forces display scale to one and bypasses thumbstick resizing. Unverified defaults allow 0.1x-2x display scaling through the slider or thumbstick; reset restores the chosen starting extent. Stand height is independent of artwork scale. Red Size unverified text remains in the webpage controls and the DOM overlay when that optional overlay is available. This is immersive inspection of a work, not a multi-room navigable museum or shared multiplayer environment.</p>
+<h3>Cleanup is part of correctness</h3>
+<p>The session saves the model&#x27;s parent, floor/grid state, camera, background, clear colour/alpha and XR-enabled state. Cleanup cancels hit testing, stops the XR animation loop, removes listeners, disposes temporary support/reticle objects, restores scene membership and resumes the screen viewer. Startup errors and aborts use the same restoration path. [<a class="reference" href="#ref-6">R6</a>]</p>
+<p>The project creator has <strong>not personally tested VR in a headset</strong>. Mock sessions and browser automation cover control flow and geometry; they do not validate headset-specific inputs, world tracking, comfort, frame rates or room-scale placement.</p>
+</section><section class="report-section" id="client-side-usdz-preparation" aria-labelledby="client-side-usdz-preparation-title">
+<header class="section-heading"><p class="section-number">08 / PDF page 9</p>
+<h2 id="client-side-usdz-preparation-title">Client-side USDZ preparation</h2></header>
+<p>Apple Quick Look is reached through a generated USDZ, not by sending the live WebGL canvas to a native view. The AR action dynamically imports Three&#x27;s USDZExporter, creates a temporary static assembly, exports it, and creates a local Blob URL. The visitor then explicitly taps an anchor with <code>rel=ar</code> and an image child. The inspected code has no server-side conversion endpoint and no Android Scene Viewer fallback; Android AR uses supported WebXR paths or device guidance. [<a class="reference" href="#ref-6">R6</a>, <a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-17">R17</a>]</p>
+<h3>Export preparation steps</h3>
+<ul>
+<li>Traverse visible meshes and reject geometry hidden through an ancestor. Clone geometry and export materials so preparation does not mutate the live viewer.</li>
+<li>Bake the currently displayed skinned or morphed pose into vertex positions where needed. Remove skin attributes/morph targets from the static result and recompute normals for that bake.</li>
+<li>Bake world transforms into cloned geometry. For mirrored transforms, reverse triangle winding after baking to preserve front-face orientation.</li>
+<li>Split material groups where necessary so the exporter does not silently omit parts of a multi-material mesh. Preserve supported maps and source material factors through the conversion.</li>
+<li>Put the uniformly scaled Artwork group beneath an identity assembly wrapper. Add optional independently sized furniture and floor/support translation.</li>
+<li>Export with the configured 2,048-pixel texture limit, create the USDZ Blob URL, and clean up the temporary scene resources.</li>
+</ul>
+<h3>Why serialized geometry must be checked</h3>
+<p>Correct Three.js bounds before export do not guarantee correct USDZ transforms. The exporter handles root/child transforms in a particular way; the identity wrapper ensures the intended physical scale appears on an exported child transform. Regression tests unzip the USDZ, read USDA prim transforms and geometry points, compose transforms, and reconstruct the exported bounds. This detects lost scale that an in-memory scene assertion would miss. [<a class="reference" href="#ref-6">R6</a>, <a class="reference" href="#ref-12">R12</a>]</p>
+<pre tabindex="0" aria-label="Code or formula"><code>exported point = parentTransform * meshTransform * vertex
+exported extent_i = max(point_i) - min(point_i)
+reference extent = exported extent_a * reviewed fraction</code></pre>
+<p>The Quick Look URL requests <code>allowsContentScaling=0</code> for a strictly reviewed reference or an assembly with a virtual stand. An unverified default without a stand uses <code>allowsContentScaling=1</code>, allowing pinch resizing. The warning appears before launch; Apple&#x27;s native viewer cannot carry the webpage&#x27;s warning overlay. Neither URL setting proves tracking accuracy or real-world dimensions. [<a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-10">R10</a>, <a class="reference" href="#ref-17">R17</a>]</p>
+<h3>Costs and compatibility limits</h3>
+<p>Client-side export allocates cloned geometry/materials, decompressed model data, encoded textures and the ZIP/Blob. Compressed GLB transfer size therefore understates peak memory. Large or complex scans can fail preparation; the UI preserves normal 3D and reports the failure. Prepared URLs are revoked when invalidated. A known double-sided-material exporter warning remains for some works; extended PBR and vertex-colour behaviour require explicit native validation. [<a class="reference" href="#ref-6">R6</a>, <a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-11">R11</a>]</p>
+<p>Chrome and WebKit each exported Laocoön/Dubuffet at a resizable 1.5 m and Ushebti at a fixed 0.09 m. WebKit&#x27;s Ushebti archive was 5,202,552 bytes. These were export checks, not native phone launches. [<a class="reference" href="#ref-10">R10</a>, <a class="reference" href="#ref-19">R19</a>]</p>
+</section><section class="report-section" id="lighting-exposure-is-not-reflectance" aria-labelledby="lighting-exposure-is-not-reflectance-title">
+<header class="section-heading"><p class="section-number">09 / PDF page 10</p>
+<h2 id="lighting-exposure-is-not-reflectance-title">Lighting: exposure is not reflectance</h2></header>
+<p>The September 13 correction separates a web camera&#x27;s exposure setting from a material&#x27;s reflectance. The earlier conversion multiplied Laocoön&#x27;s linear base colour by its page exposure of 0.2 before Apple applied native lighting. That made the input material darker. Commit <code>c66d124</code> removed this multiplication while retaining the independent emissive-intensity correction. The new all-works access release preserves that fix. [<a class="reference" href="#ref-11">R11</a>]</p>
+<pre tabindex="0" aria-label="Code or formula"><code>web image    = toneMap(pageExposure * shadedWebRadiance)
+native image = nativeRender(nativeLighting, materialInputs)
+export colour = current material colour    # no exposure gain
+export emission = emissiveColour * emissiveIntensity
+export emissiveIntensity = 1               # applied once</code></pre>
+<p>The equations describe implementation boundaries, not a complete photometric simulation. PBR base colour/albedo and emission are different inputs. The cloned material retains its existing colour/texture factors; constant and mapped emission are folded once into the export path. WebXR retains the web renderer&#x27;s per-work lights, ACES tone mapping and environment. Native Quick Look uses its own renderer and surroundings. It cannot be expected to reproduce a page&#x27;s pixels outdoors. [<a class="reference" href="#ref-5">R5</a>-<a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-11">R11</a>, <a class="reference" href="#ref-14">R14</a>, <a class="reference" href="#ref-15">R15</a>]</p>
+<h3>Complete data audit, limited visual claims</h3>
+<p>The fuller follow-up audit inspected <strong>1,046 exact-hash models, 1,266 material slots and 956 base/emissive texture references</strong>, including embedded WebP. Its per-work flag index and summary are embedded in this PDF as <code>atrium-report-evidence.json</code> [<a class="reference" href="#ref-19">R19</a>]. Every work has an outcome, but this is not an outdoor-phone inspection of every piece. The following overlapping flags use that follow-up dataset. The earlier public R11 snapshot has 64 dark-texture candidates; the expanded texture review raises that count to 230, not 230 outdoor failures:</p>
+<div class="table-wrap" role="region" aria-label="Table 1: Audit category" tabindex="0"><table>
+<thead><tr><th scope="col">Audit category</th><th scope="col">Works</th><th scope="col">Meaning</th></tr></thead><tbody>
+<tr><td>Synthetic tint / vertex variation</td><td>346 / 333</td><td>Existing presentation approximations, not measured albedo.</td></tr>
+<tr><td>Source unlit converted to lit</td><td>75</td><td>A material-semantics change needing specific review.</td></tr>
+<tr><td>Emissive texture / active emission</td><td>46 / 45</td><td>Texture channels and effective intensity need preservation.</td></tr>
+<tr><td>Source colour attribute overwritten</td><td>27</td><td>23 varying sources; 3 constant grey and 1 all-black placeholder.</td></tr>
+<tr><td>Dark-texture candidates</td><td>230</td><td>Screening flags, not instructions to brighten.</td></tr>
+</tbody></table></div>
+<p>Texture statistics use alpha-filtered 128-pixel samples and are not UV-weighted. They cannot distinguish dark paint from baked shadow or unused atlas space. Source-colour comparisons found lost patina/markings in some objects; a uniformly black placeholder also demonstrates why blindly retaining every colour attribute can fail. [<a class="reference" href="#ref-11">R11</a>]</p>
+<p>The installed exporter writes geometry <code>displayColor</code> data but does not connect a corresponding primvar reader into its preview-surface diffuse input. Presence of colour arrays therefore does not prove native Apple rendering uses them. Source-colour restoration, extended materials and physical-device appearance testing remain separate work. No per-piece outdoor gain was invented to conceal those limitations.</p>
+</section><section class="report-section" id="laocoon-one-number-is-not-the-object" aria-labelledby="laocoon-one-number-is-not-the-object-title">
+<header class="section-heading"><p class="section-number">10 / PDF page 11</p>
+<h2 id="laocoon-one-number-is-not-the-object-title">Laocoön: one number is not the object</h2></header>
+<p>The Laocoön scan is a useful example of why model identity, source dimensions, export arithmetic and actual placement must be evaluated separately. It depicts the historical extended-arm restoration. The current Vatican group has a different bent-arm configuration, so transferring its overall height or width to this mesh would describe a different representation. [<a class="reference" href="#ref-18">R18</a>]</p>
+<p>The earlier phone-scale correction used a <strong>2.42 m</strong> height for the historical version, retaining the integral altar/sculptural base and adding no virtual stand by default. SMK KAS385 records 242 cm gross height and Berlin mould 263; the Berlin master record independently gives that height. The higher hand controls the top of this particular scan. Published lateral extents remain inconsistent across historical sources. [<a class="reference" href="#ref-18">R18</a>]</p>
+<div class="table-wrap" role="region" aria-label="Table 1: Measurement" tabindex="0"><table>
+<thead><tr><th scope="col">Measurement</th><th scope="col">Value</th><th scope="col">Evidential role</th></tr></thead><tbody>
+<tr><td>Selected historical height</td><td>2.420000 m</td><td>Uniform target used by the scale/export correction.</td></tr>
+<tr><td>Actual UI-exported height</td><td>2.420074 m</td><td>Approximately 74 micrometres above target after serialization.</td></tr>
+<tr><td>Retained mesh width / depth</td><td>~1.8007 / 1.0689 m</td><td>Consequences of preserved mesh proportions at that height.</td></tr>
+<tr><td>SMK lateral extents</td><td>1.625 / 1.03 m</td><td>Source width/depth; not independently matched by the mesh.</td></tr>
+<tr><td>Berlin lateral extents</td><td>1.84 / 1.00 m</td><td>Another documented set requiring reconciliation.</td></tr>
+</tbody></table></div>
+<p>The source uses normalized signed 16-bit positions. Baking into cloned normalized attributes can round values to the 1/32767 grid; the measured exported height residual was within the stated 0.1 mm numerical tolerance. The Artwork transform remained uniform, its base was at floor level within that tolerance, and the URL disabled content resizing. This does <strong>not</strong> establish 0.1 mm accuracy of a scan, historical measurement or phone placement. [<a class="reference" href="#ref-18">R18</a>]</p>
+<h3>The lighting correction has a different target</h3>
+<p>The corrected native material&#x27;s first linear diffuse channel is approximately 0.938753, compared with 0.187751 under the superseded 0.2 exposure multiplier. This is a fivefold change in that material input, not a measurement of fivefold image brightness. The inspected Laocoön material has no active constant emission, so emission is not offered as the explanation for this specific darkening. Public-page export checks validated the restored input and unchanged size. [<a class="reference" href="#ref-11">R11</a>, <a class="reference" href="#ref-18">R18</a>]</p>
+<h3>Current access does not assert verified size</h3>
+<p>Laocoön now opens in AR/VR with red <strong>Size unverified</strong> text and a chosen <strong>1.5 m longest extent</strong>, with WebXR resizing available even with a stand. Apple permits pinch resizing only when no virtual stand is included. Dubuffet uses the same display preset. Neither has gained a verified-size badge; their source measurements and unresolved questions remain. The historical 2.42 m export test is evidence about that earlier target, not the current default. [<a class="reference" href="#ref-10">R10</a>]</p>
+<p>New Chrome and WebKit exports measured Laocoön&#x27;s longest extent at approximately 1.5000459 m, reflecting existing position quantization. This is within the 0.1 mm serialization tolerance, not real-world physical accuracy. The implementation preserves proportions rather than stretching individual axes to reconcile incompatible sources. A usable display choice and a verified measurement remain different claims. [<a class="reference" href="#ref-10">R10</a>, <a class="reference" href="#ref-19">R19</a>]</p>
+</section><section class="report-section" id="verification-and-visitor-facing-changes" aria-labelledby="verification-and-visitor-facing-changes-title">
+<header class="section-heading"><p class="section-number">11 / PDF page 12</p>
+<h2 id="verification-and-visitor-facing-changes-title">Verification and visitor-facing changes</h2></header>
+<p>Source review, geometry arithmetic, serialized files, browser behaviour and hardware tests answer different questions. Deployment <strong>34781588840 succeeded</strong>. Public Chrome checks then verified the 1,046-work index, size filters and three exports with no response interception or JavaScript errors. [<a class="reference" href="#ref-8">R8</a>, <a class="reference" href="#ref-10">R10</a>-<a class="reference" href="#ref-13">R13</a>, <a class="reference" href="#ref-19">R19</a>]</p>
+<div class="table-wrap" role="region" aria-label="Table 1: Check" tabindex="0"><table>
+<thead><tr><th scope="col">Check</th><th scope="col">Recorded outcome</th><th scope="col">What it does not establish</th></tr></thead><tbody>
+<tr><td>Historical dimension audit</td><td>666 reference extents passed serialized USDZ arithmetic.</td><td>Full-axis accuracy, source precision, identity or tracking.</td></tr>
+<tr><td>New access coverage</td><td>1,046 generated work pages: 248 strict references; 798 explicit defaults.</td><td>New physical measurements or complete visual review.</td></tr>
+<tr><td>Regression suites</td><td>Dimension, verification, access, rendering, support and spatial checks passed.</td><td>A complete hardware/device matrix.</td></tr>
+<tr><td>Discovery UI</td><td>14 checks: filters, URL retention and 320-1,440 px layouts; no JavaScript errors.</td><td>GPU speed or native touch behaviour.</td></tr>
+<tr><td>Chrome/WebKit exports</td><td>Three works per engine: Laocoön/Dubuffet at 1.5 m, resizable; Ushebti at 0.09 m, fixed.</td><td>Native launch, outdoor appearance or real-world accuracy.</td></tr>
+</tbody></table></div>
+<p>The older 666-reference audit includes 22 approximate cases and uses <code>max(0.2 mm, 0.01% of target)</code> as a numerical tolerance. The six new local exports and three public-site exports matched target extent and floor placement within 0.1 mm, including existing quantization. Arithmetic does not verify the original object; some references that passed these checks still lack the strict badge. [<a class="reference" href="#ref-8">R8</a>, <a class="reference" href="#ref-10">R10</a>, <a class="reference" href="#ref-19">R19</a>]</p>
+<h3>What visitors encounter</h3>
+<p>The home page, navigation, footer and <code>/ar-vr/</code> index expose all 1,046 works. The size-status filter separates reviewed references from default displays; search and facets persist between collection views. Actions stay below artwork. A <code>#ar-vr</code> link opens options without launching a session. [<a class="reference" href="#ref-10">R10</a>]</p>
+<p>The 798 defaults show red <strong>Size unverified</strong> text and the chosen longest dimension on cards and work controls. The dialog states that this is a display choice. Laocoön and Dubuffet have launch controls; reviewed cast/component labels remain explicit. Defaults can be resized, while strict references stay fixed. An Apple assembly with a virtual stand also stays fixed. [<a class="reference" href="#ref-6">R6</a>, <a class="reference" href="#ref-7">R7</a>, <a class="reference" href="#ref-10">R10</a>]</p>
+<h3>Hardware disclosure</h3>
+<p>The creator has tried phone AR but <strong>has not personally tested VR in a headset</strong>. Browser and export checks are not outdoor-phone or physical-headset acceptance tests. No immersive frame rate, tracking accuracy or universally correct outdoor exposure is claimed.</p>
+</section><section class="report-section" id="reproduction-and-remaining-work" aria-labelledby="reproduction-and-remaining-work-title">
+<header class="section-heading"><p class="section-number">12 / PDF page 13</p>
+<h2 id="reproduction-and-remaining-work-title">Reproduction and remaining work</h2></header>
+<p>Use the released source revision as the implementation snapshot; package <code>version: 0.0.0</code> is not a useful release identifier. The all-works access release is commit <strong>541669e476adc7e2747b729cc73fd1efe0194b58</strong>. It follows the initial 248-work discovery policy in 2ef8137 and the native lighting correction c66d124. The original 424-work comparison is 6652430. GitHub deployment run 34781588840 succeeded, followed by public index and three-work export checks. [<a class="reference" href="#ref-2">R2</a>, <a class="reference" href="#ref-4">R4</a>, <a class="reference" href="#ref-13">R13</a>]</p>
+<h3>Reproduce the code-level checks</h3>
+<pre tabindex="0" aria-label="Code or formula"><code>git clone https://github.com/never-nude/atrium.earth.git
+cd atrium.earth
+git checkout 541669e476adc7e2747b729cc73fd1efe0194b58
+npm ci
+npm run test:model-normalization
+npm run test:dimensions
+npm run test:spatial-eligibility
+npm run test:spatial-access
+npm run test:spatial
+npm run test:display-support
+npm run test:quick-look-export
+npm run build</code></pre>
+<p>The lockfile&#x27;s Astro version requires Node &gt;=22.12.0; the Pages workflow sets Node 22. These tests cover the inspected source paths, not a fresh download/verification of every original model. Acquisition and thumbnail regeneration require their additional Python/browser tools and source assets. The workflow runs <code>npm ci</code> and the production build; do not infer that every local audit suite automatically runs on every Pages deployment. [<a class="reference" href="#ref-4">R4</a>, <a class="reference" href="#ref-12">R12</a>, <a class="reference" href="#ref-13">R13</a>]</p>
+<p>The 424-to-1,046 count can be reproduced by reading <code>src/data/catalog.json</code> at the two revisions, selecting records where <code>hidden</code> is false, and comparing slug sets. For gross additions/withdrawals, traverse first-parent history once to avoid double-counting branch and merge commits.</p>
+<h3>Remaining engineering and evidence work</h3>
+<ul>
+<li><strong>Dimensions:</strong> resolve source-axis conventions, component boundaries, original/cast identity and secondary extents before expanding the 248-work strict size-review subset. AR/VR access already covers all 1,046 works through verified or default display paths. Review older documented records as well as the 380 unsupported references.</li>
+<li><strong>Geometry:</strong> inspect incomplete backs, restoration changes and mount contamination. Improve/replace an unsuitable scan where a uniform scale cannot solve the mismatch.</li>
+<li><strong>Materials:</strong> restore genuinely varying source colour where appropriate, reject placeholder attributes, and verify native material/primvar interpretation. Avoid histogram-driven brightening.</li>
+<li><strong>Physical devices:</strong> record device/browser versions, test a measured reference object on a real surface, inspect several object sizes/materials indoors and outdoors, and compare headset controls/placement. No completion is claimed for this protocol.</li>
+<li><strong>Operations:</strong> preserve reproducible source/asset hashes and review decisions; make geometry-policy changes and default-preset selection reasons explicit. Monitor asset delivery separately from static build success.</li>
+</ul>
+</section><section class="report-section" id="source-map-and-evidence" aria-labelledby="source-map-and-evidence-title">
+<header class="section-heading"><p class="section-number">13 / PDF page 14</p>
+<h2 id="source-map-and-evidence-title">Source map and evidence</h2></header>
+<blockquote><p>All links were assembled from inspected repository files and primary documentation. Code links pin a revision. The earlier local-preview notes remain historical records; the implementation discussed as current is the released 541669e snapshot. This report and its reasoning are AI-written.</p></blockquote>
+<p class="reference-entry"><a id="ref-1" href="https://www.reddit.com/r/vibecoding/comments/1vr37s1/ive_spent_six_months_vibecoding_a_growing/">R1 - Original Reddit post</a>: the 424-work account and reader AR/VR suggestion.</p>
+<p class="reference-entry"><a id="ref-2" href="https://github.com/never-nude/atrium.earth/tree/6652430">R2 - Comparison baseline 6652430</a>: master catalogue, viewer, package lock and workflow before subsequent growth.</p>
+<p class="reference-entry"><a id="ref-3" href="https://github.com/never-nude/atrium.earth/tree/541669e/docs">R3 - Current acquisition and organization records</a>: ingest manifests, scan review, six-wing inventory and exhibition changes; master catalogue under src/data.</p>
+<p class="reference-entry"><a id="ref-4" href="https://github.com/never-nude/atrium.earth/tree/541669e">R4 - Released repository and dependencies</a>: package-lock.json, requirements.txt, astro.config.mjs, README/license scope and src/lib/catalog.ts.</p>
+<p class="reference-entry"><a id="ref-5" href="https://github.com/never-nude/atrium.earth/blob/541669e/src/components/Viewer.astro">R5 - Viewer implementation</a>: rendering, materials, resource lifecycle and downloaded-byte verification.</p>
+<p class="reference-entry"><a id="ref-6" href="https://github.com/never-nude/atrium.earth/blob/541669e/src/lib/spatial-session.mjs">R6 - Spatial session and export scene</a>: room transforms, hit testing, cleanup, supports and flattened USDZ scene.</p>
+<p class="reference-entry"><a id="ref-7" href="https://github.com/never-nude/atrium.earth/blob/541669e/src/lib/spatial-viewer.mjs">R7 - Spatial UI and launch orchestration</a>: capability routing, user activation, preparation and native link policy.</p>
+<p class="reference-entry"><a id="ref-8" href="https://github.com/never-nude/atrium.earth/tree/541669e/docs/physical-dimensions-2026-09-13">R8 - Dimension audit</a>: coverage, 666-reference checks and production-page export evidence.</p>
+<p class="reference-entry"><a id="ref-9" href="https://github.com/never-nude/atrium.earth/blob/541669e/src/lib/physical-dimensions.mjs">R9 - Physical scaling implementation</a>: matched placement-reference contract and axis/fraction scale calculation; unit conversion is checked in R10.</p>
+<p class="reference-entry"><a id="ref-10" href="https://github.com/never-nude/atrium.earth/blob/541669e/docs/ar-vr-display-defaults-2026-09-13.md">R10 - All-works access and display defaults</a>: 1,046 accessible works, 248 strict references and 798 chosen presets; src/lib/spatial-access.mjs separates access from spatial-eligibility.mjs.</p>
+<p class="reference-entry"><a id="ref-11" href="https://github.com/never-nude/atrium.earth/tree/541669e/docs/ar-native-lighting-2026-09-13">R11 - Native lighting audit</a>: corrected reflectance transport and material coverage; fuller local audit additionally decoded all 956 texture references.</p>
+<p class="reference-entry"><a id="ref-12" href="https://github.com/never-nude/atrium.earth/tree/541669e/scripts">R12 - Regression tests</a>: normalization, physical dimensions, eligibility, spatial sessions/materials and actual serialized USDZ checks.</p>
+<p class="reference-entry"><a id="ref-13" href="https://github.com/never-nude/atrium.earth/actions/runs/34781588840">R13 - Successful release publishing run</a>; <a href="https://github.com/never-nude/atrium.earth/commit/c187093">R2 migration c187093</a>; deployment source in .github/workflows/deploy.yml.</p>
+<p class="reference-entry"><a id="ref-14" href="https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#materials">R14 - Khronos glTF 2.0</a>: material channel semantics. <a id="ref-15" href="https://openusd.org/release/spec_usdpreviewsurface.html">R15 - OpenUSD Preview Surface</a>: albedo/emission and material interchange.</p>
+<p class="reference-entry"><a id="ref-16" href="https://www.w3.org/TR/webxr/">R16 - W3C WebXR Device API</a>: immersive session/reference-space model. <a id="ref-17" href="https://developer.apple.com/videos/play/wwdc2020/10604/">R17 - Apple AR Quick Look</a>: native USDZ use and content-scaling parameter; <a href="https://threejs.org/docs/pages/USDZExporter.html">Three USDZExporter</a>.</p>
+<p class="reference-entry"><a id="ref-18" href="https://github.com/never-nude/atrium.earth/tree/541669e/docs/phone-scale-2026-09-12">R18 - Laocoön phone-scale review</a>: source links to SMK/Berlin/current Vatican representations, geometry and serialized export measurements.</p>
+<p class="reference-entry"><a id="ref-19" href="atrium-report-evidence.json">R19 - Embedded report evidence</a>: atrium-report-evidence.json retains the historical material summary and 1,046-work asset/flag index separately from the new access coverage, browser exports and deployment checks. It accompanies this PDF as an attachment; it contains neither source GLBs nor physical-device validation.</p>
+</section></article>
+<footer class="report-footer"><p>Written by OpenAI Codex (AI) · Snapshot: 13 September 2026</p><p><a href="atrium-technical-report.pdf">14-page PDF</a> · <a href="atrium-report-evidence.json">Evidence index</a> · <a href="https://github.com/never-nude/atrium-technical-report">Repository</a> · <a href="#top">Back to top ↑</a></p></footer>
+</main></div>
+</body></html>

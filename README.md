@@ -2,7 +2,9 @@
 
 Technical documentation for [Atrium](https://atrium.earth), a digital sculpture museum.
 
-**[Read the report (PDF)](atrium-technical-report.pdf)** · [Download the PDF](https://raw.githubusercontent.com/never-nude/atrium-technical-report/main/atrium-technical-report.pdf)
+**[Read the full report online](https://never-nude.github.io/atrium-technical-report/)**
+
+[View the 14-page PDF](atrium-technical-report.pdf) · [Download the PDF](https://raw.githubusercontent.com/never-nude/atrium-technical-report/main/atrium-technical-report.pdf) · [Evidence index](atrium-report-evidence.json)
 
 ## About the report
 
@@ -15,3 +17,7 @@ The 14-page report covers the website architecture, 3D model storage and deliver
 The creator has **not personally tested VR in a headset**. Not every work has verified physical dimensions, and browser/export checks do not establish real-device accuracy or outdoor appearance.
 
 This repository contains the report. [Website source code](https://github.com/never-nude/atrium.earth) is maintained separately.
+
+## Updating the HTML edition
+
+The complete chapter text lives in `report-content.json`. Regenerate the static page with `python3 tools/build_html.py` (Python 3.8 or later; no additional packages). GitHub Pages publishes `index.html` and `styles.css` from the root of `main`. The PDF remains available as the original paginated edition.
